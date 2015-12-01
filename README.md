@@ -26,3 +26,12 @@ http://localhost:3000/records?limit=10
 ```
 
 which returns you an array of 10 rows for example.
+
+
+## Frontend
+
+Frontend prototype
+
+1. install bower: npm install -g bower
+2. run: bower install
+3. open index.html
