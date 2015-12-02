@@ -34,7 +34,49 @@ initMap = function(){
     	layers: [baseLayer,heatmapLayer]
   });
 
-  // add onclick popup
+  // -- drawing tools --
+  var featureGroup = L.featureGroup().addTo(map);
+
+  var drawOptions = {
+    draw: {
+      polyline: false,
+      polygon: {
+        allowIntersection: false,
+        drawError: {
+          color: '#red',
+          message: '<strong>Sorry, no intersections possible.<strong>'
+        },
+        shapeOptions: {color: 'blue'}
+        },
+      rectangle : {
+        shapeOptions: {color: 'blue'}
+      },
+      circle: {
+        shapeOptions: {color: 'blue'}
+      },
+      marker: false
+    },
+    edit: {
+        featureGroup: featureGroup,
+        remove: false,
+        edit:false
+    }
+  };
+
+  var drawControl = new L.Control.Draw(drawOptions).addTo(map);
+
+  var boundaryLayer;
+  map.on('draw:drawstart', function(e) {
+    if (typeof boundaryLayer !== 'undefined') {featureGroup.removeLayer(boundaryLayer)}
+  });
+
+  
+  map.on('draw:created', function(e) {
+    boundaryLayer = e.layer;
+    featureGroup.addLayer(boundaryLayer);
+  });
+
+  // -- event handling --
   var marker;
   function onMapClick(e) {
     if (typeof marker !== "undefined") {map.removeLayer(marker)};
