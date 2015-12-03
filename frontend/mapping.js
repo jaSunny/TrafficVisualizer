@@ -1,14 +1,49 @@
 // detail pane wrapper module
 var DetailPane = (function(){
-  
+
+  var startDate = '2012-03-14';
+  var endDate = '2013-03-15';
+
   var initDateRangePicker = function(){
-    $('input[name="daterange"]').daterangepicker();
+    $('input[name="daterange"]').daterangepicker({
+        locale: {
+          format: 'YYYY-MM-DD'
+        },
+        startDate: startDate,
+        endDate: endDate,
+        minDate: '2012-03-14',
+        maxDate: '2013-05-25'
+      }, 
+    function(start, end, label) {
+        startDate = start.format('YYYY-MM-DD');
+        endDate = end.format('YYYY-MM-DD');
+    });
+  };
+
+  var mode;
+  var initModeButtons = function(){
+    // initial value
+    mode = $("#actionButtons").find(".active").find("input")[0].id;
+    // add listeners
+    $("#num_rides_btn").on("click", function(){
+      mode = 'num_rides_option';
+      console.log(mode);
+    });
+    $("#avg_cost_btn").on("click", function(){
+      mode = 'avg_cost_option';
+      console.log(mode);
+    });
+
   };
 
   return {
     create: function(){
       initDateRangePicker();
+      initModeButtons();
       return this;
+    },
+    mode: function(){
+      return mode;
     }
   }
 })();
@@ -83,37 +118,49 @@ var Map = (function(){
 // legend module
 var Legend = (function(){
   var _legend;
-  var getColor = function(d) {
-    return d > 1000 ? '#800026' :
-           d > 500  ? '#BD0026' :
-           d > 200  ? '#E31A1C' :
-           d > 100  ? '#FC4E2A' :
-           d > 50   ? '#FD8D3C' :
-           d > 20   ? '#FEB24C' :
-           d > 10   ? '#FED976' :
-                      '#FFEDA0';
-  }
+
+  var _updateLegend = function(data){
+    $(".min-span").html(data["min"])
+    $(".max-span").html(data["max"])
+  };
 
   return {
     create: function(map){
       _legend = L.control({position: 'topright'});
 
       _legend.onAdd = function(map){
-        var div = L.DomUtil.create('div', 'info legend'),
-            grades = [0, 10, 20, 50, 100, 200, 500, 1000],
-            labels = [];
+        // draw legend
+        var div = L.DomUtil.create('div', 'info legend');
+        var title = L.DomUtil.create('span','',div);
+        title.innerHTML = "Taxi Pickups";
+        title.style.display = "block";
+        var canvas = L.DomUtil.create('canvas', 'canvas', div);
+        canvas.width=125;
+        canvas.height=15;
+        var minMaxDiv = L.DomUtil.create('div','',div);
+        var minSpan = L.DomUtil.create('span','min-span',minMaxDiv);
+        minSpan.innerHTML = "0";
+        var maxSpan = L.DomUtil.create('span','max-span',minMaxDiv);
+        maxSpan.innerHTML = "0";
+        
+        // draw gradient
+        var ctx = canvas.getContext("2d");
+        var grd=ctx.createLinearGradient(0,0,125,0);
+        grd.addColorStop(0,"rgb(0,0,255)");
+        grd.addColorStop(0.55,"rgb(0,255,0)");
+        grd.addColorStop(0.85,"yellow");
+        grd.addColorStop(1,"red");
+        ctx.fillStyle=grd;
+        ctx.fillRect(0,0,125,15);
 
-        // loop through our density intervals and generate a label with a colored square for each interval
-        for (var i = 0; i < grades.length; i++) {
-            div.innerHTML +=
-                '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
-                grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
-        }
         return div;
       };
 
       map.addLegend(_legend);
       return this;
+    },
+    update: function(data){
+      _updateLegend(data)
     }    
   }
 })();
@@ -131,20 +178,19 @@ var initMap = function(){
   var drawOptions = {
     draw: {
       polyline: false,
-      polygon: {
-        allowIntersection: false,
-        drawError: {
-          color: '#red',
-          message: '<strong>Sorry, no intersections possible.<strong>'
-        },
-        shapeOptions: {color: 'blue', fillOpacity: 0}
-        },
+      polygon: false,
+      // {
+      //   allowIntersection: false,
+      //   drawError: {
+      //     color: '#red',
+      //     message: '<strong>Sorry, no intersections possible.<strong>'
+      //   },
+      //   shapeOptions: {color: 'blue', fillOpacity: 0}
+      //   },
       rectangle : {
         shapeOptions: {color: 'blue', fillOpacity: 0}
       },
-      circle: {
-        shapeOptions: {color: 'blue', fillOpacity: 0}
-      },
+      circle: false,
       marker: false
     },
     edit: {
@@ -154,6 +200,8 @@ var initMap = function(){
   };
   map.addDrawControls(drawOptions);
 
+  // create legend
+  legend = Legend.create(map);
 
   // create heatmap
   var cfg = {
@@ -164,12 +212,12 @@ var initMap = function(){
     latField: 'lat',
     lngField: 'lng',
     valueField: 'count',
+    onExtremaChange: function onExtremaChange(data){
+            legend.update(data);
+          }
   };
   var heatmapLayer = new HeatmapOverlay(cfg);
   map.addLayer(heatmapLayer);
-
-  // create legend
-  legend = Legend.create(map);
 
   // -- event handling --
   var marker;
@@ -185,6 +233,7 @@ var initMap = function(){
       })
     marker = L.marker(e.latlng);
     map.addLayer(marker);
+    legend.update(0,10);
   }
   map.on('click', onMapClick);
 

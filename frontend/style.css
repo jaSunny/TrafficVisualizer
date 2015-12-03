@@ -35,7 +35,7 @@
 	border: none;
 	margin-left:1%;
 	background-color:black;
-	min-width: 160px;
+	min-width: 170px;
 }
 
 input, select, textarea{
@@ -51,7 +51,7 @@ textarea:focus, input:focus {
 }
 
 .info {
-    padding: 6px 8px;
+    padding: 6px 6px;
     font: 14px/16px Arial, Helvetica, sans-serif;
     background: white;
     background: rgba(255,255,255,1);
@@ -61,6 +61,15 @@ textarea:focus, input:focus {
 .info h4 {
     margin: 0 0 5px;
     color: #777;
+}
+
+.min-span {
+	float:left;
+
+}
+
+.max-span {
+	float:right;
 }
 
 .legend {
