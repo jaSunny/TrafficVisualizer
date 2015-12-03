@@ -1,42 +1,133 @@
-initMap = function(){
+// detail pane wrapper module
+var DetailPane = (function(){
+  
+  var initDateRangePicker = function(){
+    $('input[name="daterange"]').daterangepicker();
+  };
 
-  var apiKey = SECRETS['mapbox_key']
+  return {
+    create: function(){
+      initDateRangePicker();
+      return this;
+    }
+  }
+})();
 
+// wrapper module for the leaflet map
+var Map = (function(){
+  var apiKey = SECRETS['mapbox_key'];
   var baseLayer = L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
       maxZoom: 18,
       attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors,' + 
-      	'<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>,' +
-      	' Imagery Â© <a href="http://mapbox.com">Mapbox</a>',
+        '<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>,' +
+        ' Imagery Â© <a href="http://mapbox.com">Mapbox</a>',
       id: 'mapbox.streets',
-      accessToken: apiKey
-  });
+      accessToken: apiKey});
+  var _map;
 
-  var cfg = {
-    radius: .0025,
-    maxOpacity: .3, 
-    scaleRadius: true, 
-    useLocalExtrema: true,
-    latField: 'lat',
-    lngField: 'lng',
-    valueField: 'count',
-    gradient: {
-      '.5': 'red',
-      '.7': 'yellow',
-      '.95': 'white'
+  var featureGroup;
+  var drawControl;
+  var boundaryLayer;
+
+  return {
+    create: function(elemId,mapConfig){
+
+      cfg = {
+        layers: baseLayer
+      }
+      $.extend(cfg,mapConfig)
+      _map = L.map(elemId,cfg)
+      return this;
+    },
+
+    addLayer: function(layer){
+      _map.addLayer(layer);
+    },
+
+    removeLayer: function(layer){
+      _map.removeLayer(layer);
+    },
+
+    addControl: function(control){
+      _map.addControl(control);
+    },
+
+    addDrawControls: function(drawOptions){
+
+      featureGroup = new L.featureGroup();
+      drawOptions['edit']['featureGroup'] = featureGroup;
+      featureGroup.addTo(_map);
+      drawControl = new L.Control.Draw(drawOptions);
+      drawControl.addTo(_map);
+
+        _map.on('draw:drawstart', function(e) {
+          if (typeof boundaryLayer !== 'undefined') {featureGroup.removeLayer(boundaryLayer)}
+        });
+        
+        _map.on('draw:created', function(e) {
+          boundaryLayer = e.layer;
+          featureGroup.addLayer(boundaryLayer);
+        });
+    },
+
+    addLegend: function(legend){
+      legend.addTo(_map);
+    },
+
+    on: function(event,func){
+      _map.on(event,func);
     }
-  };
+  }
+})();
 
-  var heatmapLayer = new HeatmapOverlay(cfg);
+// legend module
+var Legend = (function(){
+  var _legend;
+  var getColor = function(d) {
+    return d > 1000 ? '#800026' :
+           d > 500  ? '#BD0026' :
+           d > 200  ? '#E31A1C' :
+           d > 100  ? '#FC4E2A' :
+           d > 50   ? '#FD8D3C' :
+           d > 20   ? '#FEB24C' :
+           d > 10   ? '#FED976' :
+                      '#FFEDA0';
+  }
 
-  var map = L.map('map', {
-  	center: new L.LatLng(40.7127, -74.0059),
-  	zoom: 12,
-    	layers: [baseLayer,heatmapLayer]
-  });
+  return {
+    create: function(map){
+      _legend = L.control({position: 'topright'});
 
-  // -- drawing tools --
-  var featureGroup = L.featureGroup().addTo(map);
+      _legend.onAdd = function(map){
+        var div = L.DomUtil.create('div', 'info legend'),
+            grades = [0, 10, 20, 50, 100, 200, 500, 1000],
+            labels = [];
 
+        // loop through our density intervals and generate a label with a colored square for each interval
+        for (var i = 0; i < grades.length; i++) {
+            div.innerHTML +=
+                '<i style="background:' + getColor(grades[i] + 1) + '"></i> ' +
+                grades[i] + (grades[i + 1] ? '&ndash;' + grades[i + 1] + '<br>' : '+');
+        }
+        return div;
+      };
+
+      map.addLegend(_legend);
+      return this;
+    }    
+  }
+})();
+
+
+var initMap = function(){
+  
+  // create detail panel
+  var detailPane = DetailPane.create();
+
+  // create map
+  var map = Map.create('map', {center: new L.LatLng(40.7127, -74.0059), zoom: 13});
+
+  // add draw controls
   var drawOptions = {
     draw: {
       polyline: false,
@@ -46,51 +137,62 @@ initMap = function(){
           color: '#red',
           message: '<strong>Sorry, no intersections possible.<strong>'
         },
-        shapeOptions: {color: 'blue'}
+        shapeOptions: {color: 'blue', fillOpacity: 0}
         },
       rectangle : {
-        shapeOptions: {color: 'blue'}
+        shapeOptions: {color: 'blue', fillOpacity: 0}
       },
       circle: {
-        shapeOptions: {color: 'blue'}
+        shapeOptions: {color: 'blue', fillOpacity: 0}
       },
       marker: false
     },
     edit: {
-        featureGroup: featureGroup,
         remove: false,
         edit:false
     }
   };
+  map.addDrawControls(drawOptions);
 
-  var drawControl = new L.Control.Draw(drawOptions).addTo(map);
 
-  var boundaryLayer;
-  map.on('draw:drawstart', function(e) {
-    if (typeof boundaryLayer !== 'undefined') {featureGroup.removeLayer(boundaryLayer)}
-  });
+  // create heatmap
+  var cfg = {
+    radius: 15,
+    maxOpacity: .8, 
+    scaleRadius: false, 
+    useLocalExtrema: false,
+    latField: 'lat',
+    lngField: 'lng',
+    valueField: 'count',
+  };
+  var heatmapLayer = new HeatmapOverlay(cfg);
+  map.addLayer(heatmapLayer);
 
-  
-  map.on('draw:created', function(e) {
-    boundaryLayer = e.layer;
-    featureGroup.addLayer(boundaryLayer);
-  });
+  // create legend
+  legend = Legend.create(map);
 
   // -- event handling --
   var marker;
-  function onMapClick(e) {
+  var markerCircle;
+  var onMapClick = function(e) {
     if (typeof marker !== "undefined") {map.removeLayer(marker)};
-    heatmapLayer.setData({max:10,data:[{lat:e.latlng.lat,lng:e.latlng.lng,count:10},{lat:e.latlng.lat+0.0050,lng:e.latlng.lng+0.0050,count:3},{lat:e.latlng.lat-0.003,lng:e.latlng.lng-0.003,count:5}]})
+
+    heatmapLayer.setData(
+      {
+        min: 0,
+        max:10,
+        data: MOCKDATA['data']
+      })
     marker = L.marker(e.latlng);
     map.addLayer(marker);
-
   }
   map.on('click', onMapClick);
 
-  function onMouseMove(e) {$('#latlng').text(e.latlng.lat.toFixed(4) + ", " + e.latlng.lng.toFixed(4))}
+  function onMouseMove(e) {
+    $('#latlng').text(e.latlng.lat.toFixed(4) + ", " + e.latlng.lng.toFixed(4))
+  }
   map.on('mousemove',onMouseMove)
-}
-
+};
 
 window.onload = initMap;
 
