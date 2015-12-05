@@ -1,3 +1,53 @@
+var State = (function(){
+  
+  var values = {
+    "mode": "num_rides_option",
+    "polygon_string" : "",
+    "top_right": {},
+    "bottom_left": {},
+    "start_date": "2012-03-14",
+    "end_date": "2013-03-15",
+    "cells": 10
+  };
+
+  var updatePolygonString = function(topRight,bottomLeft){
+    // values: tl, tr, br, bl, tl
+
+    var topLeft = {"lat": topRight["lat"], "lng": bottomLeft["lng"]};
+    var bottomRight = {"lat":bottomLeft["lat"], "lng":topRight["lng"]};
+
+    var str = topLeft["lat"]+" "+topLeft["lng"]+","
+      +topRight["lat"]+" "+topRight["lng"]+","
+      +bottomRight["lat"]+" "+bottomRight["lng"]+","
+      +bottomLeft["lat"]+" "+bottomLeft["lng"]+","
+      topLeft["lat"]+" "+topLeft["lng"];
+
+    values["polygon_string"] = str;
+  };
+
+  return {
+    setDates: function(startDate,endDate){
+      values["start_date"] = startDate;
+      values["end_date"] = endDate;
+    },
+    setCorners: function(topRight,bottomLeft){
+      values["top_right"] = topRight;
+      values["bottom_left"] = bottomLeft;
+      updatePolygonString(topRight,bottomLeft);
+    },
+    setCells: function(cells){
+      values["cells"] = cells;
+    },
+    setMode: function(mode){
+      values["mode"] = mode;
+    },
+    getData: function(){
+      return values;
+    }
+  }
+})();
+
+
 // detail pane wrapper module
 var DetailPane = (function(){
 
@@ -18,6 +68,12 @@ var DetailPane = (function(){
         startDate = start.format('YYYY-MM-DD');
         endDate = end.format('YYYY-MM-DD');
     });
+
+    $('#daterange-picker').on('apply.daterangepicker',function(ev, picker) {
+      startDate = picker.startDate;
+      endDate = picker.endDate;
+      State.setDates(startDate.format('YYYY-MM-DD'),endDate.format('YYYY-MM-DD'));
+    });
   };
 
   var mode;
@@ -27,13 +83,12 @@ var DetailPane = (function(){
     // add listeners
     $("#num_rides_btn").on("click", function(){
       mode = 'num_rides_option';
-      console.log(mode);
+      State.setMode(mode);
     });
     $("#avg_cost_btn").on("click", function(){
       mode = 'avg_cost_option';
-      console.log(mode);
+      State.setMode(mode);
     });
-
   };
 
   return {
@@ -44,6 +99,9 @@ var DetailPane = (function(){
     },
     mode: function(){
       return mode;
+    },
+    getDates: function(){
+      return {"startDate": startDate, "endDate":endDate};
     }
   }
 })();
@@ -70,8 +128,20 @@ var Map = (function(){
       cfg = {
         layers: baseLayer
       }
-      $.extend(cfg,mapConfig)
-      _map = L.map(elemId,cfg)
+      $.extend(cfg,mapConfig);
+      _map = L.map(elemId,cfg);
+      var bounds = _map.getBounds();
+      var b = {
+        "bottom_left" : {
+          "lat" : bounds['_southWest']['lat'],
+          "lng" : bounds['_southWest']['lng']
+        },
+        "top_right" : {
+          "lat" : bounds['_northEast']['lat'],
+          "lng" : bounds['_northEast']['lng']
+        }
+      }
+      State.setCorners(b["top_right"],b["bottom_left"]);
       return this;
     },
 
@@ -122,6 +192,20 @@ var Map = (function(){
 
     on: function(event,func){
       _map.on(event,func);
+    },
+
+    getBounds: function(){
+      var bounds = _map.getBounds();
+      return {
+        "bottom_left" : {
+          "lat" : bounds['_southWest']['lat'],
+          "lng" : bounds['_southWest']['lng']
+        },
+        "top_right" : {
+          "lat" : bounds['_northEast']['lat'],
+          "lng" : bounds['_northEast']['lng']
+        }
+      }
     }
   }
 })();
@@ -185,22 +269,15 @@ var initMap = function(){
   // create map
   var map = Map.create('map', {center: new L.LatLng(40.7127, -74.0059), zoom: 13});
 
+  var initialBounds = map.getBounds();
+  console.log("initialBounds: " + initialBounds);
+
   // add draw controls
   var drawOptions = {
     draw: {
       polyline: false,
       polygon: false,
-      // {
-      //   allowIntersection: false,
-      //   drawError: {
-      //     color: '#red',
-      //     message: '<strong>Sorry, no intersections possible.<strong>'
-      //   },
-      //   shapeOptions: {color: 'blue', fillOpacity: 0}
-      //   },
-      rectangle : {
-        shapeOptions: {color: 'blue', fillOpacity: 0}
-      },
+      rectangle : false,
       circle: false,
       marker: false
     },
@@ -209,7 +286,13 @@ var initMap = function(){
         edit:false
     }
   };
-  map.addDrawControls(drawOptions);
+
+  // map.addDrawControls(drawOptions);
+  map.on('move', function (e) {
+    var bounds = map.getBounds()
+    State.setCorners(bounds["top_right"],bounds["bottom_left"]);
+    console.log(State.getData());
+  });
 
   // create legend
   legend = Legend.create(map);
@@ -248,10 +331,37 @@ var initMap = function(){
   }
   map.on('click', onMapClick);
 
+  // update
+  var update = function(data){
+    // TODO: draw heatmap
+    heatmapLayer.setData(
+      {
+        min: 0,
+        max:10,
+        data: MOCKDATA['data']
+      })
+    // TODO: update legend
+  };
+
+  $("#drawButton").on("click",function(){
+    console.log("get data");
+    var data = State.getData();
+    console.log(data);
+    // lock
+    // send data to backend, retrieve data
+    $.get( "localhost:3000", State.getData() )
+      .done(function( data ) {
+        console.log( "Data Loaded: " + data );
+    });
+    // update();
+  })
+
+
+  // lat lng display
   function onMouseMove(e) {
     $('#latlng').text(e.latlng.lat.toFixed(4) + ", " + e.latlng.lng.toFixed(4))
   }
-  map.on('mousemove',onMouseMove)
+  map.on('mousemove',onMouseMove);
 };
 
 window.onload = initMap;

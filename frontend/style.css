@@ -26,6 +26,11 @@
 	margin-left:1%;
 }
 
+#drawButton {
+	align-self:center;
+	margin-left:1%;	
+}
+
 #latlng {
 	color:rgb(127,127,127);
 	margin-left: 1%;
