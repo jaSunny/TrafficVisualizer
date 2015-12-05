@@ -13,7 +13,7 @@ var DetailPane = (function(){
         endDate: endDate,
         minDate: '2012-03-14',
         maxDate: '2013-05-25'
-      }, 
+      },
     function(start, end, label) {
         startDate = start.format('YYYY-MM-DD');
         endDate = end.format('YYYY-MM-DD');
@@ -53,7 +53,7 @@ var Map = (function(){
   var apiKey = SECRETS['mapbox_key'];
   var baseLayer = L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
       maxZoom: 18,
-      attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors,' + 
+      attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors,' +
         '<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>,' +
         ' Imagery Â© <a href="http://mapbox.com">Mapbox</a>',
       id: 'mapbox.streets',
@@ -98,10 +98,21 @@ var Map = (function(){
         _map.on('draw:drawstart', function(e) {
           if (typeof boundaryLayer !== 'undefined') {featureGroup.removeLayer(boundaryLayer)}
         });
-        
+
         _map.on('draw:created', function(e) {
           boundaryLayer = e.layer;
           featureGroup.addLayer(boundaryLayer);
+          var points = e.layer.getLatLngs();
+          var coords = ""
+          for(key in points) {
+            if(key > 0) {
+              coords += ",";
+            }
+            coords += points[key]["lat"] + " " + points[key]["lng"];
+          }
+          //add first point again because of hana
+          coords += "," + points[0]["lat"] + " " + points[0]["lng"]
+          console.log(coords);
         });
     },
 
@@ -142,7 +153,7 @@ var Legend = (function(){
         minSpan.innerHTML = "0";
         var maxSpan = L.DomUtil.create('span','max-span',minMaxDiv);
         maxSpan.innerHTML = "0";
-        
+
         // draw gradient
         var ctx = canvas.getContext("2d");
         var grd=ctx.createLinearGradient(0,0,125,0);
@@ -161,13 +172,13 @@ var Legend = (function(){
     },
     update: function(data){
       _updateLegend(data)
-    }    
+    }
   }
 })();
 
 
 var initMap = function(){
-  
+
   // create detail panel
   var detailPane = DetailPane.create();
 
@@ -206,8 +217,8 @@ var initMap = function(){
   // create heatmap
   var cfg = {
     radius: 15,
-    maxOpacity: .8, 
-    scaleRadius: false, 
+    maxOpacity: .8,
+    scaleRadius: false,
     useLocalExtrema: false,
     latField: 'lat',
     lngField: 'lng',
@@ -250,4 +261,3 @@ window.onload = initMap;
 
 
 
-	
