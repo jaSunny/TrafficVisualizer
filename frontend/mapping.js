@@ -1,5 +1,5 @@
 var State = (function(){
-  
+
   var values = {
     "mode": "num_rides_option",
     "polygon_string" : "",
@@ -20,7 +20,7 @@ var State = (function(){
       +topRight["lat"]+" "+topRight["lng"]+","
       +bottomRight["lat"]+" "+bottomRight["lng"]+","
       +bottomLeft["lat"]+" "+bottomLeft["lng"]+","
-      topLeft["lat"]+" "+topLeft["lng"];
+      +topLeft["lat"]+" "+topLeft["lng"];
 
     values["polygon_string"] = str;
   };
@@ -346,12 +346,18 @@ var initMap = function(){
   $("#drawButton").on("click",function(){
     console.log("get data");
     var data = State.getData();
-    console.log(data);
-    // lock
-    // send data to backend, retrieve data
-    $.get( "localhost:3000", State.getData() )
-      .done(function( data ) {
-        console.log( "Data Loaded: " + data );
+
+    $.ajax({
+      url:"http://localhost:3000/getGrid",
+      dataType: 'jsonp', // Notice! JSONP <-- P (lowercase)
+      data: data,
+      jsonp: "callback",
+      success:function(json){
+         console.log( json );
+      },
+      error:function(){
+         alert("Error");
+      }
     });
     // update();
   })
