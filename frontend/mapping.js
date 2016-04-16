@@ -5,10 +5,12 @@ var State = (function(){
     "polygon_string" : "",
     "top_right": {},
     "bottom_left": {},
-    "start_date": "2012-03-14",
-    "end_date": "2013-03-15",
-    "cells": 10
+    "start_date": "2012-03-14 10:00",
+    "end_date": "2013-03-15 12:00",
+    "cells": 200
   };
+
+  var backend = {};
 
   var updatePolygonString = function(topRight,bottomLeft){
     // values: tl, tr, br, bl, tl
@@ -43,6 +45,12 @@ var State = (function(){
     },
     getData: function(){
       return values;
+    },
+    getBackend: function(){
+      return backend;
+    },
+    setBackend: function(backendData){
+      backend = backendData;
     }
   }
 })();
@@ -51,28 +59,31 @@ var State = (function(){
 // detail pane wrapper module
 var DetailPane = (function(){
 
-  var startDate = '2012-03-14';
-  var endDate = '2013-03-15';
+  var startDate = '2012-03-14 10:00';
+  var endDate = '2013-03-15 12:00';
 
   var initDateRangePicker = function(){
     $('input[name="daterange"]').daterangepicker({
         locale: {
-          format: 'YYYY-MM-DD'
+          format: 'YYYY-MM-DD HH:mm'
         },
         startDate: startDate,
         endDate: endDate,
-        minDate: '2012-03-14',
-        maxDate: '2013-05-25'
+        minDate: '2012-03-14 00:00',
+        maxDate: '2013-05-25 23:59',
+        timePicker: true,
+        timePickerSeconds: false,
+        timePicker24Hour: true
       },
     function(start, end, label) {
-        startDate = start.format('YYYY-MM-DD');
-        endDate = end.format('YYYY-MM-DD');
+        startDate = start.format('YYYY-MM-DD HH:mm');
+        endDate = end.format('YYYY-MM-DD HH:mm');
     });
 
     $('#daterange-picker').on('apply.daterangepicker',function(ev, picker) {
       startDate = picker.startDate;
       endDate = picker.endDate;
-      State.setDates(startDate.format('YYYY-MM-DD'),endDate.format('YYYY-MM-DD'));
+      State.setDates(startDate.format('YYYY-MM-DD HH:mm'),endDate.format('YYYY-MM-DD HH:mm'));
     });
   };
 
@@ -87,6 +98,10 @@ var DetailPane = (function(){
     });
     $("#avg_cost_btn").on("click", function(){
       mode = 'avg_cost_option';
+      State.setMode(mode);
+    });
+    $("#avg_speed_btn").on("click", function(){
+      mode = 'avg_speed_option';
       State.setMode(mode);
     });
   };
@@ -181,8 +196,7 @@ var Map = (function(){
             coords += points[key]["lat"] + " " + points[key]["lng"];
           }
           //add first point again because of hana
-          coords += "," + points[0]["lat"] + " " + points[0]["lng"]
-          console.log(coords);
+          coords += "," + points[0]["lat"] + " " + points[0]["lng"];
         });
     },
 
@@ -227,7 +241,7 @@ var Legend = (function(){
         // draw legend
         var div = L.DomUtil.create('div', 'info legend');
         var title = L.DomUtil.create('span','',div);
-        title.innerHTML = "Taxi Pickups";
+        title.innerHTML = "";
         title.style.display = "block";
         var canvas = L.DomUtil.create('canvas', 'canvas', div);
         canvas.width=125;
@@ -270,7 +284,6 @@ var initMap = function(){
   var map = Map.create('map', {center: new L.LatLng(40.7127, -74.0059), zoom: 13});
 
   var initialBounds = map.getBounds();
-  console.log("initialBounds: " + initialBounds);
 
   // add draw controls
   var drawOptions = {
@@ -291,7 +304,6 @@ var initMap = function(){
   map.on('move', function (e) {
     var bounds = map.getBounds()
     State.setCorners(bounds["top_right"],bounds["bottom_left"]);
-    console.log(State.getData());
   });
 
   // create legend
@@ -299,13 +311,13 @@ var initMap = function(){
 
   // create heatmap
   var cfg = {
-    radius: 15,
+    radius: 20,
     maxOpacity: .8,
     scaleRadius: false,
     useLocalExtrema: false,
-    latField: 'lat',
-    lngField: 'lng',
-    valueField: 'count',
+    latField: 'CLUSTER_X',
+    lngField: 'CLUSTER_Y',
+    valueField: 'RIDES',
     onExtremaChange: function onExtremaChange(data){
             legend.update(data);
           }
@@ -316,35 +328,45 @@ var initMap = function(){
   // -- event handling --
   var marker;
   var markerCircle;
-  var onMapClick = function(e) {
-    if (typeof marker !== "undefined") {map.removeLayer(marker)};
-
-    heatmapLayer.setData(
-      {
-        min: 0,
-        max:10,
-        data: MOCKDATA['data']
-      })
-    marker = L.marker(e.latlng);
-    map.addLayer(marker);
-    legend.update(0,10);
-  }
-  map.on('click', onMapClick);
 
   // update
-  var update = function(data){
-    // TODO: draw heatmap
-    heatmapLayer.setData(
+  var update = function(){
+    var state = State.getData();
+    var backendData = State.getBackend();
+
+
+    if(state["mode"] == "num_rides_option") {
+      cfg["valueField"] = "RIDES";
+      map.removeLayer(heatmapLayer);
+      heatmapLayer = new HeatmapOverlay(cfg);
+      map.addLayer(heatmapLayer);
+      heatmapLayer.setData(
       {
-        min: 0,
-        max:10,
-        data: MOCKDATA['data']
+        min: backendData["minRides"],
+        max: backendData["maxRides"],
+        data: backendData['grid']
       })
-    // TODO: update legend
+      legend.update(backendData["minRides"],backendData["maxRides"]);
+    } else {
+       cfg["valueField"] = "RATE";
+       map.removeLayer(heatmapLayer);
+       heatmapLayer = new HeatmapOverlay(cfg);
+       map.addLayer(heatmapLayer);
+       heatmapLayer.setData(
+      {
+        min: backendData["minRate"].toFixed(2),
+        max: backendData["maxRate"].toFixed(2),
+        data: backendData['grid']
+      })
+      legend.update(backendData["minRate"],backendData["maxRate"]);
+    }
+
+
+
+
   };
 
   $("#drawButton").on("click",function(){
-    console.log("get data");
     var data = State.getData();
 
     $.ajax({
@@ -353,10 +375,42 @@ var initMap = function(){
       data: data,
       jsonp: "callback",
       success:function(json){
-         console.log( json );
+        State.setBackend(json);
+        update();
       },
       error:function(){
          alert("Error");
+      },
+      beforeSend: function () {
+         $(".modal").show();
+      },
+      complete: function () {
+        $(".modal").hide();
+      }
+    });
+    // update();
+  })
+
+  $("#avg_speed_btn").on("click",function(){
+    var data = State.getData();
+
+    $.ajax({
+      url:"http://localhost:3000/averageSpeed",
+      dataType: 'jsonp', // Notice! JSONP <-- P (lowercase)
+      data: data,
+      jsonp: "callback",
+      success:function(json){
+        State.setBackend(json);
+        update();
+      },
+      error:function(){
+         alert("Error");
+      },
+      beforeSend: function () {
+         $(".modal").show();
+      },
+      complete: function () {
+        $(".modal").hide();
       }
     });
     // update();
@@ -368,6 +422,7 @@ var initMap = function(){
     $('#latlng').text(e.latlng.lat.toFixed(4) + ", " + e.latlng.lng.toFixed(4))
   }
   map.on('mousemove',onMouseMove);
+
 };
 
 window.onload = initMap;

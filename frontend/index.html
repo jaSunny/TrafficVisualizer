@@ -8,7 +8,7 @@
 		<link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.min.css">
 		<!-- daterange-picker -->
 		<script type="text/javascript" src="bower_components/bootstrap-daterangepicker/daterangepicker.js"></script>
-		 <link rel="stylesheet" type="text/css" href="bower_components/bootstrap-daterangepicker/daterangepicker.css" /> 
+		 <link rel="stylesheet" type="text/css" href="bower_components/bootstrap-daterangepicker/daterangepicker.css" />
 		<!-- leaflet -->
 		<link rel="stylesheet" href="bower_components/leaflet/dist/leaflet.css">
  		<script type="text/javascript" src="bower_components/leaflet/dist/leaflet-src.js"></script>
@@ -24,7 +24,12 @@
  		<script type="text/javascript" src="mapping.js"></script>
  		<script type="text/javascript" src="mockdata.js"></script>
 	</head>
-	<body>	
+	<body>
+	<div class="modal" style="display: none">
+    <div class="center">
+        <img alt="" src="loader.gif" />
+    </div>
+</div>
 		<div id="detail-pane" class="container">
 			<h4 id="heading">Taxi Data</h4>
 			<input type="text" name="daterange" id="daterange-picker" value="01/01/2015 - 01/31/2015" />
@@ -35,12 +40,51 @@
 			    <input type="radio" name="options" id="num_rides_option" autocomplete="off" checked> # taxi rides
 			  </label>
 			  <label id="avg_cost_btn" class="btn btn-primary btn-sm">
-			    <input type="radio" name="options" id="avg_cost_option" autocomplete="off"> avg(cost) per taxi ride
+			    <input type="radio" name="options" id="avg_cost_option" autocomplete="off"> avg(cost)
+			  </label>
+			  <label id="clustered_rides_btn" class="btn btn-primary btn-sm">
+			    <input type="radio" name="options" id="clustered_rides_option" autocomplete="off"> clustered rides
+			  </label>
+			  <label id="avg_speed_btn" class="btn btn-primary btn-sm">
+			    <input type="radio" name="options" id="avg_speed_option" autocomplete="off"> avg(speed)
 			  </label>
 			</div>
-			<button class="btn btn-default" id="drawButton" type="submit">Draw Heatmap</button>
+			<button class="btn btn-success" id="drawButton" type="submit">Draw Heatmap</button>
 
 			<small id="latlng"></small>
+
+			<div id="iterationButtons" class="btn-group" data-toggle="buttons">
+			  <label id="it_btn_1" class="btn btn-default active btn-sm">
+			    <input type="radio" name="it_1" id="it_1" autocomplete="off" checked> 1
+			  </label>
+			  <label id="it_btn_2" class="btn btn-default btn-sm">
+			    <input type="radio" name="it_2" id="it_2" autocomplete="off" checked> 2
+			  </label>
+			  <label id="it_btn_3" class="btn btn-default btn-sm">
+			    <input type="radio" name="it_3" id="it_3" autocomplete="off" checked> 3
+			  </label>
+			  <label id="it_btn_4" class="btn btn-default btn-sm">
+			    <input type="radio" name="it_4" id="it_4" autocomplete="off" checked> 4
+			  </label>
+			  <label id="it_btn_5" class="btn btn-default btn-sm">
+			    <input type="radio" name="it_5" id="it_5" autocomplete="off" checked> 5
+			  </label>
+			  <label id="it_btn_6" class="btn btn-default btn-sm">
+			    <input type="radio" name="it_6" id="it_6" autocomplete="off" checked> 6
+			  </label>
+			  <label id="it_btn_7" class="btn btn-default btn-sm">
+			    <input type="radio" name="it_7" id="it_7" autocomplete="off" checked> 7
+			  </label>
+			  <label id="it_btn_8" class="btn btn-default btn-sm">
+			    <input type="radio" name="it_8" id="it_8" autocomplete="off" checked> 8
+			  </label>
+			  <label id="it_btn_9" class="btn btn-default btn-sm">
+			    <input type="radio" name="it_9" id="it_9" autocomplete="off" checked> 9
+			  </label>
+			  <label id="it_btn_10" class="btn btn-default btn-sm">
+			    <input type="radio" name="it_10" id="it_10" autocomplete="off" checked> 10
+			  </label>
+			</div>
 		</div>
 
 		<div id="map"</div>

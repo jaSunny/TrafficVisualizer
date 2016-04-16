@@ -26,9 +26,14 @@
 	margin-left:1%;
 }
 
+#iterationButtons {
+	align-self:center;
+	margin-left:1%;
+}
+
 #drawButton {
 	align-self:center;
-	margin-left:1%;	
+	margin-left:1%;
 }
 
 #latlng {
@@ -60,7 +65,7 @@ textarea:focus, input:focus {
     font: 14px/16px Arial, Helvetica, sans-serif;
     background: white;
     background: rgba(255,255,255,1);
-	box-shadow: 0 1px 5px rgba(0,0,0,0.65);	
+	box-shadow: 0 1px 5px rgba(0,0,0,0.65);
 	border-radius:5px;
 }
 .info h4 {
@@ -88,3 +93,33 @@ textarea:focus, input:focus {
     margin-right: 8px;
     opacity: 0.7;
 }
+.modal
+    {
+        position: fixed;
+        z-index: 999;
+        height: 100%;
+        width: 100%;
+        top: 0;
+        left: 0;
+        background-color: Black;
+        filter: alpha(opacity=60);
+        opacity: 0.6;
+        -moz-opacity: 0.8;
+    }
+    .center
+    {
+        z-index: 1000;
+        margin: 300px auto;
+        padding: 10px;
+        width: 148px;
+        background-color: Black;
+        border-radius: 10px;
+        filter: alpha(opacity=100);
+        opacity: 1;
+        -moz-opacity: 1;
+    }
+    .center img
+    {
+        height: 128px;
+        width: 128px;
+    }
